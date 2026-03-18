@@ -1,0 +1,123 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ────────────────────────────────────────────
+// TROQUE AQUI PARA MUDAR O BANCO DE DADOS
+// SQLite  → provider = "sqlite" + url = "file:./dev.db"
+// MySQL   → provider = "mysql"  + url = "mysql://user:pass@host:3306/dbname"
+// Postgres→ provider = "postgresql" + url = "postgresql://user:pass@host:5432/dbname"
+// ────────────────────────────────────────────
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("user") // "admin" | "manager" | "user"
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ─── MÓDULO FISCAL ──────────────────────────────────
+
+model TaxRule {
+  id          String   @id @default(cuid())
+  name        String                        // Ex: "ICMS SP Interno"
+  type        String                        // "ICMS" | "PIS" | "COFINS" | "ISS" | "IPI"
+  rate        Float                         // Percentual (ex: 18.0)
+  cst         String   @default("")         // Código Situação Tributária
+  cfop        String   @default("")         // Código Fiscal Operações
+  ncm         String   @default("")         // Nomenclatura Comum Mercosul
+  ufOrigem    String   @default("")         // UF de origem
+  ufDestino   String   @default("")         // UF de destino
+  active      Boolean  @default(true)
+  description String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("tax_rules")
+}
+
+model NotaFiscal {
+  id            String   @id @default(cuid())
+  numero        String   @unique             // Número sequencial da NF
+  serie         String   @default("1")
+  tipo          String                        // "NFE" | "NFCE" | "NFSE"
+  natureza      String   @default("")        // Natureza da operação
+  status        String   @default("rascunho") // "rascunho" | "emitida" | "cancelada" | "inutilizada"
+  chaveAcesso   String   @default("")        // Chave de 44 dígitos
+  protocolo     String   @default("")        // Protocolo de autorização
+  destinatario  String   @default("")        // Nome do destinatário
+  cnpjDest      String   @default("")        // CNPJ/CPF do destinatário
+  valorTotal    Float    @default(0)
+  valorProdutos Float    @default(0)
+  valorIcms     Float    @default(0)
+  valorPis      Float    @default(0)
+  valorCofins   Float    @default(0)
+  valorDesconto Float    @default(0)
+  valorFrete    Float    @default(0)
+  dataEmissao   DateTime @default(now())
+  dataSaida     DateTime?
+  observacoes   String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  xmls          XmlStorage[]
+
+  @@map("notas_fiscais")
+}
+
+model XmlStorage {
+  id           String   @id @default(cuid())
+  notaFiscalId String
+  tipo         String                        // "autorizacao" | "cancelamento" | "inutilizacao" | "evento"
+  xmlContent   String                        // Conteúdo XML
+  fileName     String   @default("")
+  fileSize     Int      @default(0)          // Tamanho em bytes
+  createdAt    DateTime @default(now())
+
+  notaFiscal   NotaFiscal @relation(fields: [notaFiscalId], references: [id], onDelete: Cascade)
+
+  @@map("xml_storage")
+}
+
+model AccountingExport {
+  id          String   @id @default(cuid())
+  periodo     String                        // Ex: "2026-03"
+  tipo        String                        // "SPED" | "EFD" | "DCTF" | "SINTEGRA" | "CUSTOM"
+  status      String   @default("pendente") // "pendente" | "gerado" | "exportado" | "erro"
+  fileName    String   @default("")
+  totalNotas  Int      @default(0)
+  valorTotal  Float    @default(0)
+  exportedBy  String   @default("")
+  errorMsg    String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("accounting_exports")
+}
