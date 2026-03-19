@@ -73,6 +73,21 @@ export default function NotasFiscaisTab() {
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [filterTipo, setFilterTipo] = useState("Todos");
   const [selectedNota, setSelectedNota] = useState<NotaFiscal | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [formData, setFormData] = useState({
+    numero: "",
+    tipo: "NFE",
+    destinatario: "",
+    cnpjDest: "",
+    natureza: "",
+    valorProdutos: 0,
+    valorIcms: 0,
+    valorPis: 0,
+    valorCofins: 0,
+    valorDesconto: 0,
+    valorFrete: 0,
+    status: "rascunho",
+  });
 
   useEffect(() => {
     fetch("/api/fiscal/notas")
@@ -113,7 +128,10 @@ export default function NotasFiscaisTab() {
           <h2 className="text-2xl font-black text-white mb-1">Guias Fiscais</h2>
           <p className="text-sm text-slate-500">Gerencie guias de recolhimento — GNRE, DARE, DAS e mais</p>
         </div>
-        <button className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-lg shadow-emerald-600/20">
+        <button 
+          onClick={() => setIsCreating(true)}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-lg shadow-emerald-600/20"
+        >
           <Plus size={18} /> Nova Guia
         </button>
       </div>
@@ -289,6 +307,128 @@ export default function NotasFiscaisTab() {
                 <Download size={16} /> Baixar Guia
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Modal */}
+      {isCreating && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-black text-white flex items-center gap-2">
+                <Plus size={24} className="text-emerald-500" /> Nova Guia de Imposto
+              </h3>
+              <button onClick={() => setIsCreating(false)} className="p-2 text-slate-400 hover:text-white transition-colors">
+                <XCircle size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const total = formData.valorProdutos + formData.valorIcms + formData.valorPis + formData.valorCofins + formData.valorFrete - formData.valorDesconto;
+              fetch("/api/fiscal/notas", {
+                method: "POST",
+                body: JSON.stringify({ ...formData, valorTotal: total }),
+                headers: { "Content-Type": "application/json" }
+              })
+              .then(r => r.json())
+              .then(data => {
+                if (data.error) alert(data.error);
+                else {
+                  setNotas([data, ...notas]);
+                  setIsCreating(false);
+                }
+              });
+            }} className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Tipo da Guia</label>
+                  <select 
+                    value={formData.tipo}
+                    onChange={(e) => setFormData({...formData, tipo: e.target.value})}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/40"
+                  >
+                    <option value="NFE">GNRE (Estadual)</option>
+                    <option value="NFCE">DARE (Estadual)</option>
+                    <option value="NFSE">DAS (Simples Nacional)</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Número (opcional)</label>
+                  <input 
+                    type="text"
+                    placeholder="000XXX"
+                    value={formData.numero}
+                    onChange={(e) => setFormData({...formData, numero: e.target.value})}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/40"
+                  />
+                </div>
+                <div className="col-span-2 space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Contribuinte / Nome Fantasia</label>
+                  <input 
+                    type="text"
+                    required
+                    placeholder="Nome da empresa ou pessoa"
+                    value={formData.destinatario}
+                    onChange={(e) => setFormData({...formData, destinatario: e.target.value})}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/40"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">CNPJ do Responsável</label>
+                  <input 
+                    type="text"
+                    required
+                    placeholder="00.000.000/0001-00"
+                    value={formData.cnpjDest}
+                    onChange={(e) => setFormData({...formData, cnpjDest: e.target.value})}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/40"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Referência Fiscal</label>
+                  <input 
+                    type="text"
+                    placeholder="Mes/Ano ou Natureza"
+                    value={formData.natureza}
+                    onChange={(e) => setFormData({...formData, natureza: e.target.value})}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/40"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-slate-800/20 border border-slate-800 rounded-2xl p-4">
+                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Composição de Valores</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-500 uppercase pl-1">Valor Principal (R$)</label>
+                    <input type="number" step="0.01" value={formData.valorProdutos} onChange={(e)=>setFormData({...formData, valorProdutos: parseFloat(e.target.value) || 0})} className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-500 uppercase pl-1">ICMS (R$)</label>
+                    <input type="number" step="0.01" value={formData.valorIcms} onChange={(e)=>setFormData({...formData, valorIcms: parseFloat(e.target.value) || 0})} className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-500 uppercase pl-1">PIS/COFINS (R$)</label>
+                    <input type="number" step="0.01" value={formData.valorPis} onChange={(e)=>setFormData({...formData, valorPis: parseFloat(e.target.value) || 0})} className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-500 uppercase pl-1">Juros/Multa (R$)</label>
+                    <input type="number" step="0.01" value={formData.valorFrete} onChange={(e)=>setFormData({...formData, valorFrete: parseFloat(e.target.value) || 0})} className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setIsCreating(false)} className="flex-1 bg-slate-800 text-slate-300 py-3 rounded-xl text-sm font-bold transition-all hover:bg-slate-700">
+                  Cancelar
+                </button>
+                <button type="submit" className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl text-sm font-bold shadow-lg shadow-emerald-900/40">
+                  Emitir Guia Fiscal
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
