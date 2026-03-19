@@ -121,3 +121,61 @@ model AccountingExport {
 
   @@map("accounting_exports")
 }
+
+// ─── MÓDULO ATLAS (CADASTROS) ───────────────────────
+
+model Supplier {
+  id                String   @id @default(cuid())
+  cnpj              String   @unique
+  razaoSocial       String
+  nomeFantasia      String?
+  situacao          String?
+  logradouro        String?
+  numero            String?
+  complemento       String?
+  bairro            String?
+  municipio         String?
+  uf                String?
+  cep               String?
+  telefone          String?
+  email             String?
+  porte             String?
+  naturezaJuridica  String?
+  atividadePrincipal String?
+  dataAbertura      String?
+  capitalSocial     String?
+  observacoes       String?
+  category          String?   // FORNECEDOR ou FILIAL
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  products          Product[]
+
+  @@map("suppliers")
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  gtin           String   @unique
+  description    String
+  department     String   @default("DIVERSOS")
+  section        String   @default("OUTROS")
+  cost           Float    @default(0)
+  salePrice      Float    @default(0)
+  taxRate        Float    @default(0)
+  ncm            String?
+  cest           String?
+  thumbnail      String?
+  suggestedPrice Float    @default(0)
+  aiReason       String?
+  
+  supplierId     String?
+  supplier       Supplier? @relation(fields: [supplierId], references: [id])
+
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("products")
+}

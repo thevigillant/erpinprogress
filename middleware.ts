@@ -4,7 +4,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Rotas públicas que não precisam de autenticação
-  const publicPaths = ["/login", "/api/auth/login"];
+  const publicPaths = ["/login", "/api/auth/login", "/api/atlas"];
 
   // Verifica se é uma rota pública
   const isPublicPath = publicPaths.some(
